@@ -156,7 +156,7 @@ Notice that we have input length of (`1+len(captions)`), the “1” comes from 
 
 Things we need to decide when creating instances of our network: `embed_size` from the input image, `hidden_size` for the DecoderRNN,  `vocab_size` from the vocabulary we created earlier and the number of layers for our LSTM.
 
-## Traininggit 
+## Training
 
 Now, we start training in the `Training.ipynb` file.
 
@@ -171,4 +171,59 @@ Important parameters that effects the training of our network:
 - `print_every` - determines how often to print the batch loss to the Jupyter notebook while training.  Note that you **will not** observe a monotonic decrease in the loss function while training - this is perfectly fine and completely expected!  You are encouraged to keep this at its default value of `100` to avoid clogging the notebook, but feel free to change it.
 - `log_file` - the name of the text file containing - for every step - how the loss and perplexity evolved during training.
 
-We applied [`nn.CrossEntropuLoss()`](<https://pytorch.org/docs/stable/nn.html>) in this case to compute our loss.  [Adam optimizer](<https://pytorch.org/docs/stable/_modules/torch/optim/adam.html>) are used for optimization with learning rate of 0.0001. The neural network is trained for 3 Epochs. The loss is initialized to be 9.3 and drops to around 4. There is a lot of potential of improving the training such as using adaptive learning rate, applying a different optimizer or simply spend more time in training.
+We applied [`nn.CrossEntropuLoss()`](<https://pytorch.org/docs/stable/nn.html>) in this case to compute our loss.  [Adam optimizer](<https://pytorch.org/docs/stable/_modules/torch/optim/adam.html>) are used for optimization with learning rate of 0.0001. The neural network is trained for 3 Epochs. The loss is initialized to be 9.3 and drops to around 2. There is a lot of potential of improving the training such as using adaptive learning rate, applying a different optimizer or simply spend more time in training.
+
+
+
+## Inference
+
+Finally, let test our trained model by feeding the encoder an *unseen* image from test dataset and ask our decoder to perform captioning based on the encoded feature vector.
+
+The maximum of caption is 25 words and we end prediction we the word `<end>` is computed at any given time step.
+
+![caption_prediction_1](images/Caption_prediction_1.png)
+
+### More Evaluation
+
+This is the most basic model we can come up with to do image-captioning.
+The model is a quite simple, but it has the right architecture to produce reasonable description.
+#### Next up
+we will see cases where the model performed well and cases where our model failed.
+From the failures, we shall summaries the type of mistakes our model make and propose potential remedies.
+
+#### The model performed well:
+
+![caption_prediction_2](images/Caption_prediction_2.png)
+
+![caption_prediction_3](images/Caption_prediction_3.png)
+
+In these two examples, the model does recognize the objects in the images and captured the main idea of what is going on.
+
+#### Now, let’s see cases where model could have performed better ...
+
+![caption_prediction_4](images/Caption_prediction_4.png)
+
+**Remark:** There is <span style="color:green">sink</span> and <span style="color:green">mirror</span>, but there is no <span style="color:red">**toilet**</span>! 
+What is potentially happening here is that: in our training images, *toilet* usually appear together with *sinks* and *mirrors*. So our **DecoderRNN** has learnt to assiciate "bathroom pixel features" with all of those since they often come up together in the training captions.
+This is not surprising to see, in that we build a **"seq-to-seq"** model where our **DecoderRNN** only gets one input(encoded image feature). In the following time-steps, our decoder only depend on predicted words from previous output(prediction from last time-step). Thus, if the word <span style="color:red">**toilet**</span> appeared together with <span style="color:green">sink</span> and <span style="color:green">mirror</span> in training dataset, the words are likely to come up together in predictions.
+
+![caption_prediction_5](images/Caption_prediction_5.png)
+
+**Remark:** There is neither <span style="color:red">man</span> nor <span style="color:red">horse</span> in the picture but a <span style="color:green">dog</span> and a <span style="color:green">cattle</span>. Definitely wrong species!
+
+We could argue that the figure of the <span style="color:green">dog</span> reasonably resembles a <span style="color:red">human</span> figure and the  <span style="color:green">cattle</span> is not very different from a <span style="color:red">horse</span>(surely more furry). This mistake might have to do with how the model has learnt to associate the **objects** in the image with the **backgrounds**. It could be the ***likelihood*** of <span style="color:red">human</span> and <span style="color:red">horse</span> appearing in dirt and grass is bigger than that of a <span style="color:green">dog</span> and a <span style="color:green">cattle</span>. 
+
+# How can we do better?
+
+Dwelling on the mistakes we usually make, besides the limited training tuning we have done, I would say that it has a lot to do with how we constructed our model. More specifically, our **Decoder** gets the image encoder as the input at the *first time-step*. Afterwards, all predictions depend on the predicted word in the last time-step.
+
+This is not very ideal for two main reasons:
+
+1. Decoder only gets to see the input image at first time-step. It would be a lot more intuitive if the encoder gets to **make each word prediction while referring back to different part of the image**. (This would avoid “seeing” a dog and say it’s a human, I expect) In addition, if each word’s prediction could associate back to some part of the image, we should expect less decency among words themselves.
+2. The sequence of words that our model predicts has a lot to do with our **first word selection**. Namely, if the model were to choose a terrible first word, it would be unlikely that it perform great captioning afterwards.
+
+To remedy these problems, we are going to implement more sophisticated model with **Attention Mechanism**, and **Beam Search** during decoding in order to boost our performance.
+
+The implementations of the model are shown in my other GitHub repo.
+
+## See you there
