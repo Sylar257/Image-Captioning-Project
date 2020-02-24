@@ -224,6 +224,6 @@ This is not very ideal for two main reasons:
 
 To remedy these problems, we are going to implement more sophisticated model with **Attention Mechanism**, and **Beam Search** during decoding in order to boost our performance.
 
-The implementations of the model are shown in my other GitHub repo.
+The implementations of the model are shown in my other [GitHub repo](https://github.com/Sylar257/Image-Captioning-with-Attention-Mechanism).
 
 ## See you there
